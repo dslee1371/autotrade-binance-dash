@@ -43,7 +43,7 @@ docker tag autotrade-binance:v0.1 172.10.30.11:5000/auto-coin/autotrade-binance-
 docker push 172.10.30.11:5000/auto-coin/autotrade-binance-dash:v0.1
 ```
 
-## Deployment
+## Menifests
 ```
 # ───────────────────────────────────────────────────────────
 # Deployment
