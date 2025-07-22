@@ -39,7 +39,7 @@ kubectl create secret generic autotrade-binance-dash-secret \
 docker build -t autotrade-binance-dash:v0.1 .
 
 # 도커 태크
-docker tag autotrade-binance:v0.1 172.10.30.11:5000/auto-coin/autotrade-binance-dash:v0.1
+docker tag autotrade-binance-dash:v0.1 172.10.30.11:5000/auto-coin/autotrade-binance-dash:v0.1
 
 # 도커 푸쉬
 docker push 172.10.30.11:5000/auto-coin/autotrade-binance-dash:v0.1
