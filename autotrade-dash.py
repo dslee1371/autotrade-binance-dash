@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 
 # MySQL 연결 정보 (환경변수로 관리하세요)
 user     = os.getenv("MYSQL_USER")      # ex) 'myuser'
-password = os.getenv("MYSQL_PASSWORD1")  # ex) 'myp@ss:word'
+password = os.getenv("MYSQL_PASSWORD")  # ex) 'myp@ss:word'
 host     = "mysql"
 port     = 3306
 db_name  = "mydb"
