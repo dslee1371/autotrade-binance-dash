@@ -45,6 +45,9 @@ docker push 172.10.30.11:5000/auto-coin/autotrade-binance-dash:v0.1
 
 ## Deployment
 ```
+# ───────────────────────────────────────────────────────────
+# Deployment
+# ───────────────────────────────────────────────────────────
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -67,12 +70,54 @@ spec:
           image: 172.10.30.11:5000/auto-coin/autotrade-binance-dash:v0.1
           imagePullPolicy: IfNotPresent
           envFrom:
-          - secretRef:
-              name: autotrade-binance-dash-secret
+            - secretRef:
+                name: autotrade-binance-dash-secret
+---
+# ───────────────────────────────────────────────────────────
+# Service
+# ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: autotrade-binance-dash
+  namespace: coinauto
+spec:
+  type: ClusterIP
+  selector:
+    app: autotrade-binance-dash
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8501
+---
+# ───────────────────────────────────────────────────────────
+# Ingress
+# ───────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: autotrade-binance-dash
+  namespace: coinauto
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+    - host: autotrade-dash.apps.lab3.dslee.lab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: autotrade-binance-dash
+                port:
+                  number: 80
+
 ```
 
 ## 배포하기
 ```
-kubectl create -f deployment.yaml
+kubectl create -f menifests.yaml
 ```
 
