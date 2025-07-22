@@ -17,9 +17,11 @@ This project is licensed under the [MIT License](LICENSE).
 자동 트레이딩 시스템의 동작을 위해 다음 환경변수를 설정해야 합니다. 민감한 정보는 `.env` 파일에 저장하고 `git` 커밋에서 제외해야 합니다 (`.gitignore`에 추가 필요).
 
 ```env
+BINANCE_API_KEY="kd..."
+BINANCE_SECRET_KEY="zKL..."
 # ✅ MySQL 연결
 MYSQL_USER=user1
-MYSQL_PASSWORD1=P%40ssw0rd                 # Streamlit에서 URL 인코딩된 비밀번호 사용 시
+MYSQL_PASSWORD=P%40ssw0rd                 # Streamlit에서 URL 인코딩된 비밀번호 사용 시
 
 ** 주의 사항 ** 따옴표(")를 사용하면 오류 발생
 ```
