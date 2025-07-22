@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8501
 
 # 웹앱 실행
-CMD ["streamlit", "run", "scraper_trade_rs_stream.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "autotrade-dash.py", "--server.port=8501", "--server.address=0.0.0.0"]
