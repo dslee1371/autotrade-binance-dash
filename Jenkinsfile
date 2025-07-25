@@ -3,7 +3,7 @@ def PROJECT_NAME = "autotrade-binance-dash"
 def Namespace = "auto-coin"
 def gitUrl = "https://github.com/dslee1371/autotrade-binance-dash"
 def imgRegistry = "172.10.30.11:5000"
-def gitOpsUrl = "https://github.com/dslee1371/gitops
+def gitOpsUrl = "https://github.com/dslee1371/gitops"
 def opsBranch = "main"
 def GIT_TAG_MESSAGE
 
