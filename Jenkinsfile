@@ -1,5 +1,5 @@
 // Jenkinsfile
-def PROJECT_NAME = "autotrade-binance-web"
+def PROJECT_NAME = "autotrade-binance-dash"
 def Namespace = "auto-coin"
 def gitUrl = "https://github.com/dslee1371/autotrade-binance-dash"
 def imgRegistry = "172.10.30.11:5000"
@@ -126,11 +126,11 @@ spec:
                                 
                                 # Update kustomization.yaml or deployment files
                                 # This is a template - adjust paths according to your GitOps structure
-                                if [ -f "autotrade-binance/kustomization.yaml" ]; then
-                                    sed -i 's|newTag:.*|newTag: ${params.TAG}|g' autotrade-binance/kustomization.yaml
+                                if [ -f "${PROJECT_NAME}/kustomization.yaml" ]; then
+                                    sed -i 's|newTag:.*|newTag: ${params.TAG}|g' ${PROJECT_NAME}/kustomization.yaml
                                     echo "Updated kustomization.yaml with tag: ${params.TAG}"
-                                elif [ -f "autotrade-binance/deployment.yaml" ]; then
-                                    sed -i 's|image:.*${PROJECT_NAME}:.*|image: ${imgRegistry}/${PROJECT_NAME}:${params.TAG}|g' autotrade-binance/deployment.yaml
+                                elif [ -f "${PROJECT_NAME}/deployment.yaml" ]; then
+                                    sed -i 's|image:.*${PROJECT_NAME}:.*|image: ${imgRegistry}/${PROJECT_NAME}:${params.TAG}|g' ${PROJECT_NAME}/deployment.yaml
                                     echo "Updated deployment.yaml with new image tag: ${params.TAG}"
                                 else
                                     echo "Warning: No kustomization.yaml or deployment.yaml found for ${PROJECT_NAME}"
