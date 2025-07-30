@@ -114,14 +114,14 @@ spec:
                             usernameVariable: 'GIT_USERNAME',
                             passwordVariable: 'GIT_PASSWORD'
                         )]) {
-                            def escUser = env.GIT_USERNAME.replaceAll('@gmail.com','')
+                            def escUser = env.GIT_USERNAME.replaceAll('@','%40')
                             sh """
                                 # Configure git
                                 git config --global user.email "dslee1371@gmail.com"
                                 git config --global user.name "dslee"
                                 
                                 # Clone GitOps repository
-                                git clone https://${escUser}:${GIT_PASSWORD}@github.com/dslee1371/gitops.git gitops-repo
+                                git clone https://github.com/dslee1371/gitops.git gitops-repo
                                 cd gitops-repo
                                 
                                 # Update kustomization.yaml or deployment files
