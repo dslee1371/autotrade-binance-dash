@@ -147,7 +147,7 @@ spec:
                                     Build info: ${GIT_TAG_MESSAGE}
                                     Jenkins Build: ${BUILD_NUMBER}"
                                     
-                                    git push https://${escUser}:${GIT_PASSWORD}@github.com/dslee1371/gitops.git ${opsBranch}
+                                    git push
                                     echo "Successfully pushed GitOps updates"
                                 fi
                             """
