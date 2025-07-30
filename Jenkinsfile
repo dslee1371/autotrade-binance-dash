@@ -121,7 +121,7 @@ spec:
                                 git config --global user.name "dslee"
                                 
                                 # Clone GitOps repository
-                                git clone https://github.com/dslee1371/gitops.git gitops-repo
+                                git clone https://${escUser}:${GIT_PASSWORD}@github.com/dslee1371/gitops.git gitops-repo
                                 cd gitops-repo
                                 
                                 # Update kustomization.yaml or deployment files
@@ -147,7 +147,7 @@ spec:
                                     Build info: ${GIT_TAG_MESSAGE}
                                     Jenkins Build: ${BUILD_NUMBER}"
                                     
-                                    git push
+                                    git push origin main
                                     echo "Successfully pushed GitOps updates"
                                 fi
                             """
