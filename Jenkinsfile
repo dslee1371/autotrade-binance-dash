@@ -114,7 +114,7 @@ spec:
                             usernameVariable: 'GIT_USERNAME',
                             passwordVariable: 'GIT_PASSWORD'
                         )]) {
-                            def escUser = env.GIT_USERNAME.replaceAll('@','%40')
+                            def escUser = env.GIT_USERNAME.replaceAll('@gmail.com','')
                             sh """
                                 # Configure git
                                 git config --global user.email "dslee1371@gmail.com"
