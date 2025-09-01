@@ -185,7 +185,7 @@ spec:
                                     git push https://${escUser}:${GIT_PASSWORD}@github.com/dslee1371/gitops.git ${opsBranch}
                                     echo "Successfully pushed GitOps updates"
                                 fi
-                            """
+                            '''
                         }
                     }
                 }
