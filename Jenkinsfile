@@ -115,7 +115,23 @@ spec:
                             passwordVariable: 'GIT_PASSWORD'
                         )]) {
                             def escUser = env.GIT_USERNAME.replaceAll('@','%40')
-                            sh """
+
+                            def appDir = 'autotrade-binance-dash'
+
+                            withEnv([
+                                "TAG=${params.TAG}",
+                                "IMG_REGISTRY=${imgRegistry}",
+                                "NAMESPACE=${Namespace}",
+                                "PROJECT_NAME=${PROJECT_NAME}",
+                                "OPS_BRANCH=${opsBranch}",
+                                "ESC_USER=${escUser}",
+                                "GIT_TAG_MESSAGE=${GIT_TAG_MESSAGE}",
+                               "APP_DIR=${appDir}"
+                            ]) {
+                            
+                            sh '''
+                                set -euo pipefail
+                                
                                 # Configure git
                                 git config --global user.email "dslee1371@gmail.com"
                                 git config --global user.name "dslee"
@@ -123,17 +139,36 @@ spec:
                                 # Clone GitOps repository
                                 git clone https://github.com/dslee1371/gitops.git gitops-repo
                                 cd gitops-repo
-                                
-                                # Update kustomization.yaml or deployment files
-                                # This is a template - adjust paths according to your GitOps structure
-                                if [ -f "${PROJECT_NAME}/kustomization.yaml" ]; then
-                                    sed -i 's|newTag:.*|newTag: ${params.TAG}|g' ${PROJECT_NAME}/kustomization.yaml
-                                    echo "Updated kustomization.yaml with tag: ${params.TAG}"
-                                elif [ -f "${PROJECT_NAME}/deployment.yaml" ]; then
-                                    sed -i 's|image:.*${PROJECT_NAME}:.*|image: ${imgRegistry}/${PROJECT_NAME}:${params.TAG}|g' ${PROJECT_NAME}/deployment.yaml
-                                    echo "Updated deployment.yaml with new image tag: ${params.TAG}"
-                                else
-                                    echo "Warning: No kustomization.yaml or deployment.yaml found for ${PROJECT_NAME}"
+
+                                git checkout -B "$OPS_BRANCH" || true
+
+                                ran_any=false
+
+                                # 1) kustomization.yaml: newTag 값 교체
+                                if [ -f "$APP_DIR/kustomization.yaml" ]; then
+                                    sed -i -E 's|(^[[:space:]]*newTag:[[:space:]]*).*$|\\1'"$TAG"'|' "$APP_DIR/kustomization.yaml"
+                                    echo "Updated $APP_DIR/kustomization.yaml to tag $TAG"
+                                    ran_any=true
+                                fi
+
+                                # 2) deployment.yaml: image 태그 + 라벨 버전(version / app.kubernetes.io/version) 동시 교체
+                                if [ -f "$APP_DIR/deployment.yaml" ]; then
+                                    # 2-1) image 태그: 대상 프로젝트 이미지만, 다이제스트(@sha256)는 제외
+                                    sed -i -E '/@sha256/! s|(image:[[:space:]]*[^[:space:]"]*/'"$PROJECT_NAME"'):[^[:space:]"#]+|\\1:'"$TAG"'|' "$APP_DIR/deployment.yaml"
+
+                                    # 2-2) metadata.labels.version (따옴표 없이 설정)
+                                    sed -i -E 's|(^[[:space:]]*version:[[:space:]]*).*$|\\1'"$TAG"'|' "$APP_DIR/deployment.yaml"
+
+                                    # 2-3) metadata.labels."app.kubernetes.io/version" (항상 따옴표 유지)
+                                    sed -i -E 's|(^[[:space:]]*app\\.[Kk]ubernetes\\.[Ii]o/version:[[:space:]]*).*$|\\1"'"$TAG"'"|' "$APP_DIR/deployment.yaml"
+
+                                    echo "Updated $APP_DIR/deployment.yaml: image tag + labels(version, app.kubernetes.io/version) -> $TAG"
+                                    ran_any=true
+                                fi
+
+                                # 3) 둘 다 없으면 경고
+                                if [ "$ran_any" = false ]; then
+                                    echo "Warning: No kustomization.yaml or deployment.yaml found under $APP_DIR"
                                     echo "Please update your GitOps repository structure"
                                 fi
                                 
