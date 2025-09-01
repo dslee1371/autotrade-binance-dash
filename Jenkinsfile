@@ -108,7 +108,7 @@ spec:
               def escUser = env.GIT_USERNAME.replaceAll('@','%40')
 
               // GitOps 앱 디렉터리 (레포 구조에 맞게 필요 시 변경)
-              def appDir = ${PROJECT_NAME}
+              def appDir = "autotrade-binance-dash"
 
               withEnv([
                 "TAG=${params.TAG}",
