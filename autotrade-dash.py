@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from urllib.parse import urlparse
 load_dotenv()
 import time
 
@@ -26,8 +27,37 @@ def get_engine():
 
     user = os.getenv("MYSQL_USER")
     password = os.getenv("MYSQL_PASSWORD")
-    host = os.getenv("MYSQL_HOST", "mysql")
-    port = int(os.getenv("MYSQL_PORT", 3306))
+    host_env = os.getenv("MYSQL_HOST", "mysql")
+    port_env = os.getenv("MYSQL_PORT")
+
+    host = host_env
+    port = 3306
+
+    # 호스트 값에 프로토콜이나 포트가 포함되어 있으면 파싱
+    if host_env and "://" in host_env:
+        parsed = urlparse(host_env)
+        host = parsed.hostname or host_env
+        if parsed.port:
+            port = parsed.port
+        if parsed.username and not user:
+            user = parsed.username
+        if parsed.password and not password:
+            password = parsed.password
+    elif host_env and ":" in host_env:
+        host_part, port_part = host_env.rsplit(":", 1)
+        if host_part:
+            host = host_part
+        if port_part.isdigit():
+            port = int(port_part)
+
+    if port_env:
+        try:
+            port = int(port_env)
+        except ValueError as exc:
+            raise RuntimeError(
+                "MYSQL_PORT 환경 변수는 숫자여야 합니다."
+            ) from exc
+
     db_name = os.getenv("MYSQL_DATABASE", "mydb")
 
     db_uri = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db_name}"
