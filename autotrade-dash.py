@@ -2,7 +2,6 @@ import os
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -13,22 +12,35 @@ import time
 
 # --- SQLAlchemy import 추가 ---
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 
-# MySQL 연결 정보 (환경변수로 관리하세요)
-user     = os.getenv("MYSQL_USER")      # ex) 'myuser'
-password = os.getenv("MYSQL_PASSWORD")  # ex) 'myp@ss:word'
-host     = "mysql"
-port     = 3306
-db_name  = "mydb"
+@st.cache_resource
+def get_engine():
+    """Create and cache a SQLAlchemy engine based on environment variables."""
+    required_envs = ["MYSQL_USER", "MYSQL_PASSWORD"]
+    missing = [env for env in required_envs if not os.getenv(env)]
+    if missing:
+        raise RuntimeError(
+            "다음 환경 변수가 설정되지 않았습니다: " + ", ".join(missing)
+        )
 
+    user = os.getenv("MYSQL_USER")
+    password = os.getenv("MYSQL_PASSWORD")
+    host = os.getenv("MYSQL_HOST", "mysql")
+    port = int(os.getenv("MYSQL_PORT", 3306))
+    db_name = os.getenv("MYSQL_DATABASE", "mydb")
 
-# mysql+mysqlconnector://<사용자>:<비밀번호>@<호스트>:<포트>/<데이터베이스>
-DB_URI = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db_name}"
+    db_uri = f"mysql+mysqlconnector://{user}:{password}@{host}:{port}/{db_name}"
 
-engine = create_engine(
-    DB_URI,
-    pool_pre_ping=True,
-)
+    try:
+        engine = create_engine(
+            db_uri,
+            pool_pre_ping=True,
+        )
+    except SQLAlchemyError as exc:
+        raise RuntimeError("데이터베이스 연결 엔진을 생성할 수 없습니다.") from exc
+
+    return engine
 
 # 페이지 설정
 st.set_page_config(
@@ -79,38 +91,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# DB 설정
-def get_connection():
-    """MySQL 데이터베이스 연결을 리턴"""
-    try:
-        if DRIVER == 'mysql-connector':
-            return db_driver.connect(
-                host=DB_CONFIG['host'],
-                port=DB_CONFIG['port'],
-                user=DB_CONFIG['user'],
-                password=DB_CONFIG['password'],
-                database=DB_CONFIG['database'],
-                auth_plugin='mysql_native_password'
-            )
-        else:
-            return db_driver.connect(
-                host=DB_CONFIG['host'],
-                port=DB_CONFIG['port'],
-                user=DB_CONFIG['user'],
-                password=DB_CONFIG['password'],
-                database=DB_CONFIG['database'],
-                charset='utf8mb4',
-                cursorclass=db_driver.cursors.DictCursor
-            )
-    except Error as e:
-        print(f"Error connecting to MySQL ({DRIVER}): {e}")
-        raise
-
 # 데이터 로딩 함수
 @st.cache_data(ttl=60)  # 60초마다 데이터 갱신
 def load_trades_data():
     query = """
-    SELECT t.id, t.timestamp, t.action, t.entry_price, t.amount, t.order_size, 
+    SELECT t.id, t.timestamp, t.action, t.entry_price, t.amount, t.order_size,
            t.leverage, t.stop_loss, t.take_profit, t.kelly_fraction, t.win_probability, 
            t.volatility, t.status,
            tr.close_timestamp, tr.close_price, tr.pnl, tr.pnl_percentage, tr.result
@@ -118,9 +103,11 @@ def load_trades_data():
     LEFT JOIN trade_results tr ON t.id = tr.trade_id
     ORDER BY t.timestamp DESC
     """
-    # SQLAlchemy 엔진을 직접 전달
-    df = pd.read_sql_query(query, engine)
-    
+    try:
+        df = pd.read_sql_query(query, get_engine())
+    except SQLAlchemyError as exc:
+        raise RuntimeError("거래 데이터를 불러오는 중 오류가 발생했습니다.") from exc
+
     # 날짜 열 변환
     df['timestamp']       = pd.to_datetime(df['timestamp'])
     df['close_timestamp'] = pd.to_datetime(df['close_timestamp'])
@@ -140,7 +127,10 @@ def load_account_history():
     FROM account_history
     ORDER BY timestamp
     """
-    df = pd.read_sql_query(query, engine)
+    try:
+        df = pd.read_sql_query(query, get_engine())
+    except SQLAlchemyError as exc:
+        raise RuntimeError("계정 이력을 불러오는 중 오류가 발생했습니다.") from exc
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     return df
 
@@ -367,9 +357,13 @@ def main():
         value=(datetime.now() - timedelta(days=30), datetime.now()),
         max_value=datetime.now()
     )
+
+    if isinstance(date_range, tuple):
+        start_date, end_date = date_range
+    else:
+        start_date = end_date = date_range
     
     # 필터 적용된 데이터 (날짜 범위)
-    start_date, end_date = date_range
     start_date = pd.Timestamp(start_date)
     end_date = pd.Timestamp(end_date) + timedelta(days=1)  # 포함 범위
     
@@ -818,23 +812,34 @@ def main():
         st.info("선택한 기간에 거래 내역이 없습니다.")
     
     # 자동 새로고침 설정
+    now = time.time()
+    if 'last_refresh' not in st.session_state:
+        st.session_state['last_refresh'] = now
+    last_refresh = st.session_state['last_refresh']
+
+    if st.session_state.get('refresh_interval') != refresh_interval:
+        st.session_state['refresh_interval'] = refresh_interval
+        st.session_state['last_refresh'] = now
+        last_refresh = now
+
+    seconds_since_refresh = now - last_refresh
+    seconds_to_refresh = max(int(refresh_interval - seconds_since_refresh), 0)
+
+    st.sidebar.markdown(
+        f"마지막 새로고침: {datetime.fromtimestamp(last_refresh).strftime('%Y-%m-%d %H:%M:%S')}"
+    )
+    st.sidebar.markdown(
+        f"다음 새로고침까지 **{seconds_to_refresh}초** 남음"
+        if refresh_interval > 0 else "자동 새로고침이 비활성화되었습니다."
+    )
+
     if st.sidebar.button('지금 새로고침'):
-        st.rerun()
-    
-    st.sidebar.markdown(f"마지막 새로고침: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    # 자동 새로고침 카운터
-    if refresh_interval > 0:
-        placeholder = st.sidebar.empty()
-        refresh_count = refresh_interval
-        
-        while refresh_count > 0:
-            placeholder.markdown(f"다음 새로고침까지 **{refresh_count}초** 남음")
-            time.sleep(1)
-            refresh_count -= 1
-        
-        placeholder.markdown("데이터 새로고침 중...")
-        st.rerun()
+        st.session_state['last_refresh'] = now
+        st.experimental_rerun()
+
+    if refresh_interval > 0 and seconds_since_refresh >= refresh_interval:
+        st.session_state['last_refresh'] = now
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     main()
